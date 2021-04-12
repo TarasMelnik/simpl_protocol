@@ -1,0 +1,33 @@
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "Win32",
+            "compilerPath": "D:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe",
+            "compilerArgs": [],
+            "intelliSenseMode": "windows-msvc-x64",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/bob/AppData/Local/Temp/**",
+                "C:/Users/bob/Documents/Arduino/libraries/**",
+                "C:/Program Files (x86)/Arduino/libraries/**",
+                "C:/Users/bob/Documents/Arduino/libraries/simpl_protocol/**",
+                "C:\\Users\\bob\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.5\\libraries\\**",
+                "C:\\Users\\bob\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.5\\cores\\**",
+                "c:/Users\\bob\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.5\\tools\\sdk\\**",
+                "c:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino/**",
+                "C:\\Users\\bob\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.5/tools/sdk/include/**",
+                "C:/Program Files (x86)/Arduino/hardware/arduino/avr/cores/arduino/**",
+                "C:/Users/bob/AppData/Local/Arduino15/packages/arduino/hardware/megaavr/1.8.6/cores/**"
+            ],
+            "forcedInclude": [],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ]
+        }
+    ]
+}

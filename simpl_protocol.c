@@ -14,7 +14,7 @@
   ******************************************************************************
 */
 
-#include "Arduino.h"
+// #include "Arduino.h"
 #include "simpl_protocol.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -71,17 +71,18 @@ uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t 
 
     if(data_in_size > ESP_GATT_MAX_LEN) {
         data_in_size = ESP_GATT_MAX_LEN;
-        // log_e("Size %d too large, must be no bigger than %d", length, ESP_GATT_MAX_LEN);
+        return 0;
     }
 
     data_out[byte_num++] = SN_VAL_HEADER;
-    data_out[byte_num++] = data_in_size;
+    data_out[byte_num++] = data_in_size+2;
     data_out[byte_num++] = cmd;
     
     memcpy(&data_out[byte_num], data_in, data_in_size);
     byte_num += data_in_size;
 
-    for(uint8_t i = 0; i < SN_VAL_CONST_LENG+1;i++){
+    unsigned short i;
+    for( i = 0; i < byte_num;i++){
         data_out[byte_num] ^= data_out[i];
     }
 
@@ -115,13 +116,13 @@ SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data)
     return status;
 }
 
-SN_Status sn_crc_check(sn_protocol_t *msg)
+SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf)
 {
     SN_Status status = SN_ERROR;
     uint8_t crc = 0;
 
-    for (int i = 0; i < msg->len + 1; i++)  {
-        crc ^= msg->data[i];
+    for (int i = 0; i <= msg->len; i++)  {
+        crc ^= buf[i];
     }
 
     if(crc == msg->crc){
@@ -157,7 +158,7 @@ SN_Status sn_crc_check(sn_protocol_t *msg)
  *   uint8_t byte = serial.getNextByte();
  *   if sn_pars_char(byte, &msg) == SN_OK)
  *     {
- *      printf("Received message with ID %d, len: %d , msg.data[BYTE_NUM_CMD], msg.data[BYTE_NUM_LEN]);
+ *      printf("Received message with CMD %d, len: %d , msg.data[BYTE_NUM_CMD], msg.data[BYTE_NUM_LEN]);
  *     }
  * }
  *
@@ -169,52 +170,54 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
     SN_Status state = SN_NONE;
 
     static uint16_t len;
-
+    static uint8_t buf[ESP_GATT_MAX_LEN];
     switch (msg->status)
     {
     case BYTE_NUM_HEADER:
         if (c == SN_VAL_HEADER)
         {
+            len = 0;
+            buf[len] = c;
+            len += 1;
             msg->status = BYTE_NUM_LENG;
         }
         break;
     case BYTE_NUM_LENG:
-        if(c < ESP_GATT_MAX_LEN){
-            msg->status = BYTE_NUM_CMD;
-            msg->len = c;
-            len = 0;
-        }
-        else//reset
-        {
-            msg->status = BYTE_NUM_HEADER;
-        }
+    	buf[len] = c;
+        len += 1;
+        msg->status = BYTE_NUM_CMD;
+        msg->len = c;
         break;
     case BYTE_NUM_CMD:
-        msg->data[len] = c;
-        msg->status = BYTE_NUM_CRC;
+    	buf[len] = c;
+        len += 1;
+        msg->status = BYTE_NUM_DATA;
         break;
     case BYTE_NUM_DATA:
          if(len >= msg->len){
-            msg->data[len] = c;
+        	 buf[len] = c;
             msg->status = BYTE_NUM_CRC;
         }
         else
         {
-            msg->data[len] = c;
+        	buf[len] = c;
             len += 1;
+            msg->status = BYTE_NUM_DATA;
         }
         break;
     case BYTE_NUM_CRC:
         msg->status = BYTE_NUM_HEADER;
         msg->crc = c;
 
-        state = sn_crc_check(msg);
-        if (state != SN_OK)
-        {
-            msg->error_crc += 1;
+        state = sn_crc_check(msg, buf);
+        if (state == SN_OK) {
+        	memcpy(&msg->data[0], &buf[0], sizeof(buf));
+        } else {
+        	msg->error_crc += 1;
         }
+
         // clear after parsing
-        memset(msg->data, 0, sizeof(msg->data));
+        memset(buf, 0, sizeof(buf));
         break;
 
     default:
@@ -225,14 +228,17 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
     return state;
 }
 
-void SN_test(void)
+//void main(void)
+void sn_test(void)
 {
-    uint64_t _buttons = 424242424242424242;
-    uint16_t _x = 512, _y = 512, _z = 512, _rX = 512, _rY = 512, _rZ = 512, _slider1 = 256, _slider2 = 512;
-    uint8_t _hat4 = 12, _hat3 = 11, _hat2 = 10, _hat1 = 9;
-    uint8_t m[28];
-    uint8_t m_check[28];
-    uint8_t out[100];
+    uint64_t _buttons = 123456789012345678;
+    uint16_t _x = 1111, _y = 2222, _z = 3333, _rX = 4444, _rY = 5555, _rZ = 6666, _slider1 = 7777, _slider2 = 8888;
+    uint8_t _hat4 = 55, _hat3 = 44, _hat2 = 33, _hat1 = 22;
+    static uint8_t m[28];
+    memset(m, 0, sizeof(m));
+    static uint8_t out[100];
+    memset(out, 0, sizeof(out));
+    
     m[0] = _buttons;
     m[1] = (_buttons >> 8);
     m[2] = (_buttons >> 16);
@@ -262,21 +268,38 @@ void SN_test(void)
     m[26] = _hat2;
     m[27] = _hat1;
 
-    uint16_t len = sn_pack_ext(JOYSTICK_STATE, m, out, sizeof(m)-1);
-
-    // Serial.send(out, len+1);
-
-    for (int i = 0; i < len+1; i++)  {
-        if(sn_pars_char(out[i], &sn) == SN_OK){
-            // Serial1.printf("SN pars char = DANE, CRC - OK");
+    uint16_t len = sn_pack_ext(JOYSTICK_STATE, m, out, sizeof(m));
+//    printf("SN pack done len = %d\n\r", len);
+//    for (uint8_t i = 0; i <= len+5; i++)  {
+//      printf("%d ", out[i]);
+//
+//    }
+//    printf("\n\r");
+//
+//    printf(" ");
+    SN_Status st;
+    for (uint8_t i = 0; i < len+1; i++)  {
+//        printf("i= %d ", i);
+//        printf("%d",out[i]);
+        st = sn_pars_char(out[i], &sn);
+//        printf(" st = %d", st);
+//        printf(" msgSTat = %d \n\r", sn.status);
+        if(st == SN_OK){
+//            printf("SN pars char = DANE, CRC - OK");
             break;
+        } else {
+          if(i == len){
+            // printf("SN pars ERROR");
+          }
         }
 
         if(i > sizeof(m)+4){
-            // Serial1.printf("SN pars char = DANE, CRC - OK");
+            // printf("SN pars char = ERROR LEN,");
             break;
         }
+        // delay(5);
     }
+//   printf("END SN_test1()");
 
 }
 

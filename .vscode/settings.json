@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "simpl_protocol.h": "c"
+    },
+    "cmake.configureOnOpen": false
+}

@@ -68,14 +68,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define SN_PROTOCOL_VERSION 1.0f
+#define SN_PROTOCOL_VERSION 1.001f
 //typedef  unsigned char uint8_t
 
 #define SN_VAL_HEADER       (uint8_t)0xAF
 #define SN_VAL_CONST_LENG   (uint8_t)0x03 // for const data length
 
 /// GATT maximum attribute length
-#define ESP_GATT_MAX_LEN   256-2 //600 //as same as GATT_MAX_ATTR_LEN create for bluetooth transfer
+#define ESP_GATT_MAX_LEN   256+4 //600 //as same as GATT_MAX_ATTR_LEN create for bluetooth transfer
 
 #ifdef __cplusplus
  extern "C" {
@@ -111,7 +111,7 @@ typedef enum
 
 typedef enum {
   NONE,
-  JOYSTICK_STATE
+  JOYSTICK_STATE = 1
 } _CMD;
 
 typedef struct s_sn_protocol {  
@@ -128,7 +128,7 @@ uint8_t* sn_pack_const(uint8_t cmd, uint8_t data); // const LEN, return pointer 
 uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t data_in_size); // return data pack len
 SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg);
 SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data); // pointer to input data array
-SN_Status sn_crc_check(sn_protocol_t *msg);
+SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf);
 sn_protocol_t* sn_get(void);
 
 void sn_test (void);
