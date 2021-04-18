@@ -14,12 +14,13 @@
   ******************************************************************************
 */
 
-// #include "Arduino.h"
-#include "simpl_protocol.h"
+#include "Arduino.h"
+#include <simpl_protocol.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
 
 sn_protocol_t sn = {
     .cmd = SN_PROTC_NONE,
@@ -30,10 +31,19 @@ sn_protocol_t sn = {
     .crc = 0
 };
 
-//sn_protocol_t sn_old;
-sn_protocol_t *get_sn(void)
+// HardwareSerial* _serial; 
+
+static uint16_t len;
+static uint8_t buf[ESP_GATT_MAX_LEN];
+
+sn_protocol_t *sn_get(void)
 {
     return &sn;
+}
+
+uint8_t get_cmd(void)
+{
+    return sn.cmd;
 }
 
 /**
@@ -169,8 +179,7 @@ SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf)
 SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
     SN_Status state = SN_NONE;
 
-    static uint16_t len;
-    static uint8_t buf[ESP_GATT_MAX_LEN];
+
     switch (msg->status)
     {
     case BYTE_NUM_HEADER:
@@ -190,17 +199,20 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
         break;
     case BYTE_NUM_CMD:
     	buf[len] = c;
+        msg->cmd = c;
         len += 1;
         msg->status = BYTE_NUM_DATA;
         break;
     case BYTE_NUM_DATA:
          if(len >= msg->len){
-        	 buf[len] = c;
+        	buf[len] = c;
+            msg->data[len-3] = c;
             msg->status = BYTE_NUM_CRC;
         }
         else
         {
         	buf[len] = c;
+            msg->data[len-3] = c;
             len += 1;
             msg->status = BYTE_NUM_DATA;
         }
@@ -211,7 +223,16 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
 
         state = sn_crc_check(msg, buf);
         if (state == SN_OK) {
-        	memcpy(&msg->data[0], &buf[0], sizeof(buf));
+            msg->sn_connected = true;
+            // for (uint8_t i = 0; i <= len-3; i++)  {
+            //     msg->data[i] = buf[i+3];
+                
+            // }
+            // __disable_irq();
+        	// memcpy(msg->data, &buf[0], len+1);
+            // __enable_irq();
+            msg->cmd = buf[BYTE_NUM_CMD];
+            // msg->len = buf[BYTE_NUM_LENG];
         } else {
         	msg->error_crc += 1;
         }

@@ -28,7 +28,9 @@
 /** 
  * @brief FOR ESP32 
 //!!!! ACHTUNG !!!!
-
+  @p uint64_t _buttons
+  @p uint16_t _x, _y, _z, _rX, _rY, _rZ, _slider1, _slider2
+  @p uint8_t _hat4 , _hat3, _hat2, _hat1
  * uint8_t m[28];
 		m[0] = _buttons;
 		m[1] = (_buttons >> 8);
@@ -130,10 +132,9 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg);
 SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data); // pointer to input data array
 SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf);
 sn_protocol_t* sn_get(void);
+uint8_t get_cmd(void);
 
 void sn_test (void);
-
-extern sn_protocol_t sn;
 
 #ifdef __cplusplus
 }
