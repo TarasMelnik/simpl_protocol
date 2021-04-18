@@ -2,7 +2,7 @@
   ******************************************************************************
   * File Name          : simpl_protocol.c
   * Description        : This file contains simpl protocol of KKS5
-  * Autor              : Melnik Taras melnik.taras.6699@gmail.com  
+  * Autor              : Melnik Taras melnik.taras.6699@gmail.com
   ******************************************************************************
   * @attention
   *
@@ -87,7 +87,7 @@ uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t 
     data_out[byte_num++] = SN_VAL_HEADER;
     data_out[byte_num++] = data_in_size+2;
     data_out[byte_num++] = cmd;
-    
+
     memcpy(&data_out[byte_num], data_in, data_in_size);
     byte_num += data_in_size;
 
@@ -96,7 +96,7 @@ uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t 
         data_out[byte_num] ^= data_out[i];
     }
 
-    return byte_num;
+    return ++byte_num;
 }
 
 SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data)
@@ -118,7 +118,7 @@ SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data)
 
         }
     } else{
-        
+
         status = SN_ERROR;
 
     }
@@ -245,7 +245,7 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
         msg->status = BYTE_NUM_HEADER;
         break;
     }
-    
+
     return state;
 }
 
@@ -259,7 +259,7 @@ void sn_test(void)
     memset(m, 0, sizeof(m));
     static uint8_t out[100];
     memset(out, 0, sizeof(out));
-    
+
     m[0] = _buttons;
     m[1] = (_buttons >> 8);
     m[2] = (_buttons >> 16);
