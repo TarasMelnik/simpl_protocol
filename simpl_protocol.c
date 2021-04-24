@@ -14,8 +14,7 @@
   ******************************************************************************
 */
 
-#include "Arduino.h"
-#include <simpl_protocol.h>
+#include "simpl_protocol.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
@@ -69,18 +68,17 @@ uint8_t *sn_pack_const(uint8_t cmd, uint8_t data)
     return arr;
 }
 
-/** !!!! ACHTUNG !!!! я не тестував його
+/**
  * @brief Pack a extended len protocol
  * @param cmd  ID command
- * @return length of the message in bytes (excluding serial stream start sign)
+ * @return SIZE of the message in bytes (excluding serial stream start sign)
  */
 
-uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t data_in_size){ //
+uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint8_t data_in_size){ //
     uint16_t byte_num = 0;
-    memset(data_out,0, data_in_size);
+    //memset(data_out,0, data_in_size);
 
-    if(data_in_size > ESP_GATT_MAX_LEN) {
-        data_in_size = ESP_GATT_MAX_LEN;
+    if(data_in_size > 255-2) {
         return 0;
     }
 
@@ -91,12 +89,31 @@ uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t 
     memcpy(&data_out[byte_num], data_in, data_in_size);
     byte_num += data_in_size;
 
+    data_out[byte_num] = 0; // start crc must = 0
     unsigned short i;
     for( i = 0; i < byte_num;i++){
         data_out[byte_num] ^= data_out[i];
     }
 
-    return ++byte_num;
+    byte_num += 1;
+    return byte_num;
+}
+
+SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf)
+{
+    SN_Status status = SN_CRC_ERROR;
+    uint8_t crc = 0;
+    
+    uint8_t i = 0;
+    for (i=0; i < msg->len+1; i++)  {
+        crc ^= buf[i];
+    }
+
+    if(crc == msg->crc){
+        status = SN_OK;
+    }
+
+    return status;
 }
 
 SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data)
@@ -121,22 +138,6 @@ SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data)
 
         status = SN_ERROR;
 
-    }
-
-    return status;
-}
-
-SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf)
-{
-    SN_Status status = SN_ERROR;
-    uint8_t crc = 0;
-
-    for (int i = 0; i <= msg->len; i++)  {
-        crc ^= buf[i];
-    }
-
-    if(crc == msg->crc){
-        status = SN_OK;
     }
 
     return status;
@@ -222,19 +223,20 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
         msg->crc = c;
 
         state = sn_crc_check(msg, buf);
-        if (state == SN_OK) {
+
+        if(state == SN_OK) {
             msg->sn_connected = true;
             // for (uint8_t i = 0; i <= len-3; i++)  {
-            //     msg->data[i] = buf[i+3];
-                
+            //     msg->data[i] = buf[i+3]; 
             // }
             // __disable_irq();
         	// memcpy(msg->data, &buf[0], len+1);
             // __enable_irq();
-            msg->cmd = buf[BYTE_NUM_CMD];
+            // msg->cmd = buf[BYTE_NUM_CMD];
             // msg->len = buf[BYTE_NUM_LENG];
-        } else {
-        	msg->error_crc += 1;
+        } else if(state == SN_CRC_ERROR) {
+            msg->sn_connected = false;
+            msg->error_crc += 1;
         }
 
         // clear after parsing
@@ -250,46 +252,46 @@ SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg){
 }
 
 //void main(void)
-void sn_test(void)
+void sn_test(uint8_t* m, uint16_t size)
 {
-    uint64_t _buttons = 123456789012345678;
-    uint16_t _x = 1111, _y = 2222, _z = 3333, _rX = 4444, _rY = 5555, _rZ = 6666, _slider1 = 7777, _slider2 = 8888;
-    uint8_t _hat4 = 55, _hat3 = 44, _hat2 = 33, _hat1 = 22;
-    static uint8_t m[28];
-    memset(m, 0, sizeof(m));
+    // uint64_t _buttons = 123456789012345678;
+    // uint16_t _x = 1111, _y = 2222, _z = 3333, _rX = 4444, _rY = 5555, _rZ = 6666, _slider1 = 7777, _slider2 = 8888;
+    // uint8_t _hat4 = 55, _hat3 = 44, _hat2 = 33, _hat1 = 22;
+    // static uint8_t m[28];
+    // memset(m, 0, sizeof(m));
     static uint8_t out[100];
     memset(out, 0, sizeof(out));
 
-    m[0] = _buttons;
-    m[1] = (_buttons >> 8);
-    m[2] = (_buttons >> 16);
-    m[3] = (_buttons >> 24);
-    m[4] = (_buttons >> 32);
-    m[5] = (_buttons >> 40);
-    m[6] = (_buttons >> 48);
-    m[7] = (_buttons >> 56);
-    m[8] = _x;
-    m[9] = (_x >> 8);
-    m[10] = _y;
-    m[11] = (_y >> 8);
-    m[12] = _z;
-    m[13] = (_z >> 8);
-    m[14] = _rZ;
-    m[15] = (_rZ >> 8);
-    m[16] = _rX;
-    m[17] = (_rX >> 8);
-    m[18] = _rY;
-    m[19] = (_rY >> 8);
-    m[20] = _slider1;
-    m[21] = (_slider1 >> 8);
-    m[22] = _slider2;
-    m[23] = (_slider2 >> 8);
-    m[24] = _hat4;
-    m[25] = _hat3;
-    m[26] = _hat2;
-    m[27] = _hat1;
+    // m[0] = _buttons;
+    // m[1] = (_buttons >> 8);
+    // m[2] = (_buttons >> 16);
+    // m[3] = (_buttons >> 24);
+    // m[4] = (_buttons >> 32);
+    // m[5] = (_buttons >> 40);
+    // m[6] = (_buttons >> 48);
+    // m[7] = (_buttons >> 56);
+    // m[8] = _x;
+    // m[9] = (_x >> 8);
+    // m[10] = _y;
+    // m[11] = (_y >> 8);
+    // m[12] = _z;
+    // m[13] = (_z >> 8);
+    // m[14] = _rZ;
+    // m[15] = (_rZ >> 8);
+    // m[16] = _rX;
+    // m[17] = (_rX >> 8);
+    // m[18] = _rY;
+    // m[19] = (_rY >> 8);
+    // m[20] = _slider1;
+    // m[21] = (_slider1 >> 8);
+    // m[22] = _slider2;
+    // m[23] = (_slider2 >> 8);
+    // m[24] = _hat4;
+    // m[25] = _hat3;
+    // m[26] = _hat2;
+    // m[27] = _hat1;
 
-    uint16_t len = sn_pack_ext(JOYSTICK_STATE, m, out, sizeof(m));
+    uint16_t len = sn_pack_ext(JOYSTICK_STATE, m, out, size);//sizeof(m));
 //    printf("SN pack done len = %d\n\r", len);
 //    for (uint8_t i = 0; i <= len+5; i++)  {
 //      printf("%d ", out[i]);
@@ -298,7 +300,7 @@ void sn_test(void)
 //    printf("\n\r");
 //
 //    printf(" ");
-    SN_Status st;
+    static SN_Status st;
     for (uint8_t i = 0; i < len+1; i++)  {
 //        printf("i= %d ", i);
 //        printf("%d",out[i]);
@@ -306,18 +308,20 @@ void sn_test(void)
 //        printf(" st = %d", st);
 //        printf(" msgSTat = %d \n\r", sn.status);
         if(st == SN_OK){
-//            printf("SN pars char = DANE, CRC - OK");
+            asm("nop");
+            // printf("SN pars char = DANE, CRC - OK");
             break;
         } else {
           if(i == len){
+            asm("nop");
             // printf("SN pars ERROR");
           }
         }
 
-        if(i > sizeof(m)+4){
-            // printf("SN pars char = ERROR LEN,");
-            break;
-        }
+        // if(i > sizeof(m)+4){
+        //     // printf("SN pars char = ERROR LEN,");
+        //     break;
+        // }
         // delay(5);
     }
 //   printf("END SN_test1()");

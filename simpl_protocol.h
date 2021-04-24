@@ -2,7 +2,7 @@
   ******************************************************************************
   * File Name          : simpl_protocol.h 
   * Description        : This file contains all the functions prototypes for 
-  *                      the simple protocol ver 1.0
+  *                      the simple protocol ver 1.13
   * Autor              : Melnik Taras melnik.taras.6699@gmail.com   
   ******************************************************************************
   * @attention SN_PROTOCOL
@@ -100,7 +100,8 @@ typedef enum
 {
   SN_NONE = 0x00,
   SN_OK = 1,
-  SN_ERROR
+  SN_ERROR = 2,
+  SN_CRC_ERROR = 3
 } SN_Status;
 
 typedef enum
@@ -127,14 +128,14 @@ typedef struct s_sn_protocol {
 } sn_protocol_t;
 
 uint8_t* sn_pack_const(uint8_t cmd, uint8_t data); // const LEN, return pointer to pack array
-uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint16_t data_in_size); // return data pack len
+uint16_t sn_pack_ext(uint8_t cmd, uint8_t *data_in, uint8_t* data_out, uint8_t data_in_size); // return data pack size
 SN_Status sn_pars_char(uint8_t c, sn_protocol_t *msg);
 SN_Status sn_unpack(sn_protocol_t *msg, uint8_t *in_data); // pointer to input data array
 SN_Status sn_crc_check(sn_protocol_t *msg, uint8_t* buf);
 sn_protocol_t* sn_get(void);
 uint8_t get_cmd(void);
 
-void sn_test (void);
+void sn_test(uint8_t* m, uint16_t size);
 
 #ifdef __cplusplus
 }
